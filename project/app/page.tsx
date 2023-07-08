@@ -116,7 +116,7 @@ export default function Home() {
               } px-3 py-1 rounded-lg cursor-pointer`}
             >
               <span className=" text-gray-600 text-lg font-bold  ">
-                {ServicesWithHeading[service]}
+                {ServicesWithHeading[service as Services]}
               </span>
 
               <p className="text-sm text-gray-500"> Lorem ipsum dolor sit..</p>
