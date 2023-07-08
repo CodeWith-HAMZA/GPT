@@ -90,6 +90,17 @@ export default function Home() {
       if (articles.length > 0) setArticle(articles.at(0).summary);
     }
   }, []);
+  const handleSpeak = () => {
+    toast.success("Started Text To Speech");
+    const speech = new SpeechSynthesisUtterance();
+    speech.text = Article;
+    speechSynthesis.speak(speech);
+  };
+  const handleCancelSpeech = () => {
+    toast.success("Canceled Text To Speech");
+
+    speechSynthesis.cancel();
+  };
 
   return (
     <>
@@ -249,20 +260,61 @@ export default function Home() {
                     Article Summary:
                   </h2>
                   {Article && (
-                    <button
-                      onClick={() => {
-                        toast.success("Copied To Clipboard the article");
-                        navigator.clipboard.writeText(Article);
-                      }}
-                      className="mr-4 text-gray-700 hover:text-gray-500"
-                    >
-                      <CopyToClipBoardIcon className={"w-6 h-6"} />
-                    </button>
+                    <div className="">
+                      <button
+                        onClick={() => {
+                          toast.success("Copied To Clipboard the article");
+                          navigator.clipboard.writeText(Article);
+                        }}
+                        className="mr-4 text-gray-700 hover:text-gray-500"
+                      >
+                        <CopyToClipBoardIcon className={"w-6 h-6"} />
+                      </button>
+                      <button onClick={handleSpeak} className="">
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          strokeWidth={1.5}
+                          stroke="currentColor"
+                          className="w-6 h-6 text-gray-600 mr-5"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            d="M19.114 5.636a9 9 0 010 12.728M16.463 8.288a5.25 5.25 0 010 7.424M6.75 8.25l4.72-4.72a.75.75 0 011.28.53v15.88a.75.75 0 01-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.507-1.938-1.354A9.01 9.01 0 012.25 12c0-.83.112-1.633.322-2.396C2.806 8.756 3.63 8.25 4.51 8.25H6.75z"
+                          />
+                        </svg>
+                      </button>
+                      <button onClick={handleCancelSpeech} className="">
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          strokeWidth={1.5}
+                          stroke="currentColor"
+                          className="w-6 h-6 text-gray-600 mr-5"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            d="M17.25 9.75L19.5 12m0 0l2.25 2.25M19.5 12l2.25-2.25M19.5 12l-2.25 2.25m-10.5-6l4.72-4.72a.75.75 0 011.28.531V19.94a.75.75 0 01-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.506-1.938-1.354A9.01 9.01 0 012.25 12c0-.83.112-1.633.322-2.395C2.806 8.757 3.63 8.25 4.51 8.25H6.75z"
+                          />
+                        </svg>
+                      </button>
+                    </div>
                   )}
                 </div>
                 <p className="text-lg bg-gradient-to-r bg-clip-text text-transparent from-gray-500 via-gray-800 to-gray-600">
                   {isFetching || isPosting || isLoading ? (
-                    <Skeleton count={4} />
+                    <>
+                      <Skeleton count={4} baseColor="#8585856e" />
+                      <Skeleton
+                        baseColor={"#8585856e"}
+                        width={"14rem"}
+                        count={1}
+                      />
+                    </>
                   ) : (
                     Article
                   )}
