@@ -1,12 +1,13 @@
 "use client";
-import { getLocalStorage, setLocalStorage } from "@/utils/helpers";
+import { getLocalStorage } from "@/utils/helpers";
 import {
   useGetArticleSummaryOfGivenParagraphMutation,
-  useGetArticleSummaryQuery,
   useLazyGetArticleSummaryQuery,
 } from "./services/article";
 import { FormEvent, useEffect, useState } from "react";
 import { Toaster, toast } from "react-hot-toast";
+import Skeleton from "react-loading-skeleton";
+import "react-loading-skeleton/dist/skeleton.css";
 
 const ServicesWithHeading = {
   summarize: "Summarize Through Link",
@@ -48,7 +49,7 @@ export default function Home() {
           ])
         );
         setArticle(data?.summary ?? "");
-      } catch (err) {
+      } catch (err: any) {
         console.log("error occured while fetching: ", err);
         toast.error(err.message);
       }
@@ -57,16 +58,16 @@ export default function Home() {
 
   async function getArticleSummaryByGivenPara(paragraph: string) {
     try {
-      const { data } = await getArticleSummaryOfGivenParagraph({
-        lang: "es",
+      const { data }: any = await getArticleSummaryOfGivenParagraph({
+        lang: "ur",
         text: paragraph,
       });
       setArticle(data.summary ?? "");
 
       console.log(data, "post");
-    } catch (err) {
-      console.log(err.message);
-      toast.error(err.message);
+    } catch (err: any) {
+      console.log(err?.message);
+      toast.error(err?.message);
     }
   }
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
@@ -86,14 +87,14 @@ export default function Home() {
     if (localStorage.getItem("articles")) {
       const articles = getLocalStorage("articles");
       setAllArticles([...articles]);
-      setArticle(articles.at(0).summary);
+      if (articles.length > 0) setArticle(articles.at(0).summary);
     }
   }, []);
 
   return (
     <>
       <Toaster position="bottom-center" />
-      <section className=" px-3 pt-8 ">
+      <section className=" px-3 pt-8 pb-24">
         <div className="mx-auto max-w-3xl text-center">
           <h1 className="bg-gradient-to-r mt-16 mb-8 from-red-400 via-blue-500 to-green-600 bg-clip-text text-3xl font-extrabold text-transparent sm:text-6xl">
             Modify Your Text On Your Own!
@@ -104,17 +105,18 @@ export default function Home() {
           </p>
         </div>
         <div className="flex gap-3 bg-gray-50 justify-center  p-2">
-          {Object.keys(ServicesWithHeading).map((key) => (
+          {Object.keys(ServicesWithHeading).map((service, idx) => (
             <div
-              onClick={() => setService(key as Services)}
+              key={idx}
+              onClick={() => setService(service as Services)}
               className={`transition-all hover:opacity-90   min-h-[5rem] ${
-                !(key === Service)
+                !(service === Service)
                   ? "bg-gradient-to-tr shadow-md"
                   : "bg-purple-100 shadow-lg"
               } px-3 py-1 rounded-lg cursor-pointer`}
             >
               <span className=" text-gray-600 text-lg font-bold  ">
-                {ServicesWithHeading[key]}
+                {ServicesWithHeading[service]}
               </span>
 
               <p className="text-sm text-gray-500"> Lorem ipsum dolor sit..</p>
@@ -194,10 +196,12 @@ export default function Home() {
           <div className=" ">
             <div className="overflow-y-scroll max-h-[14.5rem] p-3">
               {AllArticles &&
-                AllArticles?.map(({ url, summary }: Article) => {
-                  console.log("map", url, summary);
+                AllArticles?.map(({ url, summary }: Article, idx) => {
                   return (
-                    <div className="bg-white flex gap-2 items-center my-1.5 py-3 px-6 shadow-sm cursor-pointer hover:opacity-80 transition-all text-gray-500">
+                    <div
+                      key={idx}
+                      className="bg-white flex gap-2 items-center my-1.5 py-3 px-6 shadow-sm cursor-pointer hover:opacity-80 transition-all text-gray-500"
+                    >
                       <URLIcon2 />
 
                       <span
@@ -238,27 +242,33 @@ export default function Home() {
                 })}
             </div>
 
-            {Article && (
+            {
               <>
                 <div className="flex justify-between mt-16 mb-6 items-center">
                   <h2 className="bg-gradient-to-r   from-red-400 via-blue-500 to-green-600 bg-clip-text text-2xl font-bold   text-transparent sm:text-3xl">
                     Article Summary:
                   </h2>
-                  <button
-                    onClick={() => {
-                      toast.success("Copied To Clipboard the article");
-                      navigator.clipboard.writeText(Article);
-                    }}
-                    className="mr-4 text-gray-700 hover:text-gray-500"
-                  >
-                    <CopyToClipBoardIcon className={"w-6 h-6"} />
-                  </button>
+                  {Article && (
+                    <button
+                      onClick={() => {
+                        toast.success("Copied To Clipboard the article");
+                        navigator.clipboard.writeText(Article);
+                      }}
+                      className="mr-4 text-gray-700 hover:text-gray-500"
+                    >
+                      <CopyToClipBoardIcon className={"w-6 h-6"} />
+                    </button>
+                  )}
                 </div>
                 <p className="text-lg bg-gradient-to-r bg-clip-text text-transparent from-gray-500 via-gray-800 to-gray-600">
-                  {Article}
+                  {isFetching || isPosting || isLoading ? (
+                    <Skeleton count={4} />
+                  ) : (
+                    Article
+                  )}
                 </p>
               </>
-            )}
+            }
           </div>{" "}
         </div>
       </section>
@@ -339,7 +349,7 @@ function CrossIcon() {
     </svg>
   );
 }
-function PencilIcon({ className }) {
+function PencilIcon({ className }: { className: string }) {
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
