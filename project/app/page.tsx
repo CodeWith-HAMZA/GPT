@@ -163,7 +163,7 @@ export default function Home() {
                       type="url"
                       name="url"
                       className="  border-none outline-none w-full"
-                      placeholder="Enter URL"
+                      placeholder="Enter URL To Summarize"
                     />
                   </>
                 )}
@@ -173,7 +173,7 @@ export default function Home() {
                     <textarea
                       name="paragraph"
                       className="border-none outline-none w-full"
-                      placeholder="Enter URL"
+                      placeholder="Enter Paragraph For The Summary"
                     ></textarea>
                   </>
                 )}{" "}
