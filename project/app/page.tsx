@@ -8,7 +8,7 @@ import { FormEvent, useEffect, useState } from "react";
 import { Toaster, toast } from "react-hot-toast";
 import Skeleton from "react-loading-skeleton";
 import "react-loading-skeleton/dist/skeleton.css";
-
+import Dropdown from "@/app/components/client/Dropdown";
 const ServicesWithHeading = {
   summarize: "Summarize Through Link",
   "summarize-text": "Summarize Through Given Paragraph",
@@ -18,8 +18,9 @@ type Services = "summarize" | "summarize-text" | "extract";
 export default function Home() {
   const [AllArticles, setAllArticles] = useState<Article[]>([]);
   const [Article, setArticle] = useState<string>("");
-  const [Service, setService] = useState<Services>("summarize");
+  const [Service, setService] = useState<Services>("summarize-text");
   const [Speaking, setSpeaking] = useState<boolean>(false);
+
   const [getArticleSummary, { data, error, isLoading, isFetching }] =
     useLazyGetArticleSummaryQuery();
   const [
@@ -28,59 +29,71 @@ export default function Home() {
   ] = useGetArticleSummaryOfGivenParagraphMutation();
 
   console.log(data, "euu ", isLoading);
-  async function getArticleSummaryByURL(url: string) {
-    if (url) {
-      try {
-        const article = AllArticles.find((article) => article.url === url);
-        if (article) {
-          return;
-        }
-        const { data } = await getArticleSummary({
-          url,
-          length: 7,
-        });
-        console.log(data, "data");
-        setAllArticles([...AllArticles, { url, summary: data?.summary ?? "" }]);
-        localStorage.setItem(
-          "articles",
-          JSON.stringify([
-            ...AllArticles,
-            { url, summary: data?.summary ?? "" },
-          ])
-        );
-        setArticle(data?.summary ?? "");
-      } catch (err: any) {
-        console.log("error occured while fetching: ", err);
-        toast.error(err.message);
+  async function getArticleSummaryByURL(url: string, length: number) {
+    try {
+      const article = AllArticles.find((article) => article.url === url);
+      if (article) {
+        return;
       }
+      const res = await getArticleSummary({
+        url,
+        length,
+      });
+      console.log(res, "data, eu");
+      setAllArticles([
+        ...AllArticles,
+        { url, summary: res?.data?.summary ?? "" },
+      ]);
+      localStorage.setItem(
+        "articles",
+        JSON.stringify([...AllArticles, { url, summary: data?.summary ?? "" }])
+      );
+      setArticle(res?.data?.summary ?? "");
+    } catch (err: any) {
+      console.log("error occured while fetching: ", err);
+      toast.error(err.message + "Request Failed, While Fetching By Given URL");
     }
   }
 
-  async function getArticleSummaryByGivenPara(paragraph: string) {
+  async function getArticleSummaryByGivenPara(
+    paragraph: string,
+    lang: string,
+    length: number
+  ) {
     try {
       const { data }: any = await getArticleSummaryOfGivenParagraph({
-        lang: "ur",
+        lang,
         text: paragraph,
+        length,
       });
       setArticle(data.summary ?? "");
 
       console.log(data, "post");
     } catch (err: any) {
       console.log(err?.message);
-      toast.error(err?.message);
+      toast.error(
+        err?.message + " Request Failed, While Fetching By Given Paragraph"
+      );
     }
   }
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formElement = e.currentTarget;
     const formData = new FormData(formElement);
-    const url = formData.get("url");
-    const paragraph = formData.get("paragraph");
+    const url = formData.get("url")?.toString();
+    const paragraph = formData.get("paragraph")?.toString();
+    const lang = formData.get("lang")?.toString();
+    const length = Number(formData.get("length"));
+    console.log(url, paragraph, lang, length);
 
-    if (Service === "summarize") {
-      await getArticleSummaryByURL(url as string);
-    } else if (Service === "summarize-text") {
-      await getArticleSummaryByGivenPara(paragraph as string);
+    if (Service === "summarize" && url !== "") {
+      await getArticleSummaryByURL(url as string, length);
+    } else if (Service === "summarize-text" && paragraph !== "") {
+      await getArticleSummaryByGivenPara(
+        paragraph as string,
+        lang as string,
+        length
+      );
     }
   };
   useEffect(() => {
@@ -97,8 +110,7 @@ export default function Home() {
     speechSynthesis.speak(speech);
   };
   const handleCancelSpeech = () => {
-    toast.success("Canceled Text To Speech");
-
+    toast.success("Stopped Text To Speech");
     speechSynthesis.cancel();
   };
 
@@ -141,69 +153,86 @@ export default function Home() {
             "opacity-40  pointer-events-none cursor-not-allowed"
           } container mx-auto `}
         >
-          <div className="bg-white my-8 rounded-md shadow-lg ">
-            <form
-              onSubmit={handleSubmit}
-              className="flex justify-between items-center cursor-text px-3 py-1 gap-4"
-            >
-              {Service === "summarize" && (
-                <>
-                  <URLIcon />
-                  <input
-                    type="url"
-                    name="url"
-                    className="  border-none outline-none w-full"
-                    placeholder="Enter URL"
-                  />
-                </>
-              )}
-              {Service === "summarize-text" && (
-                <>
-                  <PencilIcon className="self-start h-6 w-6" />
-                  <textarea
-                    name="paragraph"
-                    className="border-none outline-none w-full"
-                    placeholder="Enter URL"
-                  ></textarea>
-                </>
-              )}{" "}
-              <button
-                type="submit"
-                className="bg-black py-1.5 self-end px-2 rounded-md w-40 text-gray-200 hover:text-gray-300"
-                disabled={isLoading}
-              >
-                {isLoading || isFetching || isPosting ? (
+          <form onSubmit={handleSubmit}>
+            <div className="bg-white my-8 rounded-md shadow-lg ">
+              <div className="flex justify-between items-center cursor-text px-3 py-1 gap-4">
+                {Service === "summarize" && (
                   <>
-                    <span className="flex justify-center items-center gap-1 ">
-                      <img src="/loading.gif" className="w-7 h-7" />
-                    </span>
+                    <URLIcon />
+                    <input
+                      type="url"
+                      name="url"
+                      className="  border-none outline-none w-full"
+                      placeholder="Enter URL"
+                    />
                   </>
-                ) : (
-                  <span>Generate</span>
                 )}
-              </button>
-            </form>
-          </div>
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2">
-              <input
-                type="radio"
-                className="text-gray-600 w-5 h-5"
-                name="service"
-                id=""
-              />
-              <span className="text-gray-600">Summarize Through Link</span>
+                {Service === "summarize-text" && (
+                  <>
+                    <PencilIcon className="self-start h-6 w-6" />
+                    <textarea
+                      name="paragraph"
+                      className="border-none outline-none w-full"
+                      placeholder="Enter URL"
+                    ></textarea>
+                  </>
+                )}{" "}
+                <button
+                  type="submit"
+                  className="bg-black py-1.5 self-end px-2 rounded-md w-40 text-gray-200 hover:text-gray-300"
+                  disabled={isLoading}
+                >
+                  {isLoading || isFetching || isPosting ? (
+                    <>
+                      <span className="flex justify-center items-center gap-1 ">
+                        <img src="/loading.gif" className="w-7 h-7" />
+                      </span>
+                    </>
+                  ) : (
+                    <span>Generate</span>
+                  )}
+                </button>
+              </div>
             </div>
-            <div className="flex items-center gap-2">
-              <input
-                type="radio"
-                className="focus:text-gray-900 text-gray-600 w-5 h-5"
-                name="service"
-                id=""
-              />
-              <span className="text-gray-600">Summarize Through Paragraph</span>
+            <div className="flex  items-center gap-4">
+              <div className="flex justify-between items-center gap-8">
+                <div className="flex flex-col">
+                  <label
+                    htmlFor="length"
+                    className="text-gray-700 font-medium mb-1"
+                  >
+                    Length Of The Paragraph
+                  </label>
+                  <input
+                    type="number"
+                    min={1}
+                    max={7}
+                    id="length"
+                    name="length"
+                    className="border border-gray-300 rounded-md px-4 py-2 focus:outline-none focus:border-indigo-500 transition duration-300"
+                    placeholder="Enter a number"
+                  />
+                </div>
+                {Service === "summarize-text" ? (
+                  <div className="flex flex-col">
+                    <label
+                      htmlFor="numberInput"
+                      className="text-gray-700 font-medium mb-1 "
+                    >
+                      Language Of The Paragraph
+                    </label>
+                    <select name="lang" className="p-2.5 hover:opacity-75 ">
+                      <option value={"en"}>English</option>
+                      <option value={"ur"}>Urdu</option>
+                      <option value={"sp"}>Spanish</option>
+                    </select>
+                  </div>
+                ) : (
+                  ""
+                )}
+              </div>
             </div>
-          </div>
+          </form>
           <div className=" ">
             <div className="overflow-y-scroll max-h-[14.5rem] p-3">
               {AllArticles &&
@@ -272,62 +301,42 @@ export default function Home() {
                       <span className="" onClick={() => setSpeaking(!Speaking)}>
                         {Speaking ? (
                           <button onClick={handleCancelSpeech} className="">
-                            <svg
-                              xmlns="http://www.w3.org/2000/svg"
-                              fill="none"
-                              viewBox="0 0 24 24"
-                              strokeWidth={1.5}
-                              stroke="currentColor"
-                              className="w-6 h-6 text-gray-600 mr-5"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                d="M17.25 9.75L19.5 12m0 0l2.25 2.25M19.5 12l2.25-2.25M19.5 12l-2.25 2.25m-10.5-6l4.72-4.72a.75.75 0 011.28.531V19.94a.75.75 0 01-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.506-1.938-1.354A9.01 9.01 0 012.25 12c0-.83.112-1.633.322-2.395C2.806 8.757 3.63 8.25 4.51 8.25H6.75z"
-                              />
-                            </svg>
+                            <PauseIcon />
                           </button>
                         ) : (
                           <button onClick={handleSpeak}>
-                            <svg
-                              xmlns="http://www.w3.org/2000/svg"
-                              fill="none"
-                              viewBox="0 0 24 24"
-                              strokeWidth={1.5}
-                              stroke="currentColor"
-                              className="w-6 h-6 text-gray-600 mr-5"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                d="M19.114 5.636a9 9 0 010 12.728M16.463 8.288a5.25 5.25 0 010 7.424M6.75 8.25l4.72-4.72a.75.75 0 011.28.53v15.88a.75.75 0 01-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.507-1.938-1.354A9.01 9.01 0 012.25 12c0-.83.112-1.633.322-2.396C2.806 8.756 3.63 8.25 4.51 8.25H6.75z"
-                              />
-                            </svg>
+                            <PlayIcon />
                           </button>
                         )}
                       </span>
                     </div>
                   )}
                 </div>
-                <p className="text-lg bg-gradient-to-r bg-clip-text text-transparent from-gray-500 via-gray-800 to-gray-600">
-                  {isFetching || isPosting || isLoading ? (
-                    <>
-                      <Skeleton count={4} baseColor="#8585856e" />
-                      <Skeleton
-                        baseColor={"#8585856e"}
-                        width={"14rem"}
-                        count={1}
-                      />
-                    </>
-                  ) : (
-                    Article
-                  )}
-                </p>
+                <ArticleText
+                  loadingArticle={isFetching || isPosting || isLoading}
+                  Article={Article}
+                />
               </>
             }
           </div>{" "}
         </div>
       </section>
+    </>
+  );
+}
+function ArticleText({ ...props }) {
+  return (
+    <p className="text-lg bg-gradient-to-r bg-clip-text text-transparent from-gray-500 via-gray-800 to-gray-600">
+      {props.loadingArticle ? <ArticleSkeleton /> : props.Article}
+    </p>
+  );
+}
+
+function ArticleSkeleton() {
+  return (
+    <>
+      <Skeleton count={4} baseColor="#00000017" />
+      <Skeleton baseColor={"#00000017"} width={"14rem"} count={1} />
     </>
   );
 }
@@ -419,6 +428,47 @@ function PencilIcon({ className }: { className: string }) {
         strokeLinecap="round"
         strokeLinejoin="round"
         d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10"
+      />
+    </svg>
+  );
+}
+function PlayIcon() {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      fill="none"
+      viewBox="0 0 24 24"
+      strokeWidth={1.2}
+      stroke="currentColor"
+      className="w-6 h-6 hover:opacity-80"
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+      />
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M15.91 11.672a.375.375 0 010 .656l-5.603 3.113a.375.375 0 01-.557-.328V8.887c0-.286.307-.466.557-.327l5.603 3.112z"
+      />
+    </svg>
+  );
+}
+function PauseIcon() {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      fill="none"
+      viewBox="0 0 24 24"
+      stroke-width="1.5"
+      stroke="currentColor"
+      className="w-6 h-6 hover:opacity-80"
+    >
+      <path
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        d="M14.25 9v6m-4.5 0V9M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
       />
     </svg>
   );
